@@ -4,7 +4,7 @@
     <version>0.0.1</version>
     <description>
         This package provides functionalities to throttle the output of
-        rosbag on user-defined topics (i.e. to ensure deterministic computation
+        rosbag on user-defined topics (e.g. to ensure deterministic computation
         of ros nodes).
     </description>
     <maintainer email="christian.emmerich@roboception.de">Christian Emmerich</maintainer>
