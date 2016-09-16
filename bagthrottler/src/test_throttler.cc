@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
   // configure bag throttler to a specific rosbag topic
   BagThrottler::throttle<sensor_msgs::JointState>("/iiwa/joint_states");
-//  BagThrottler::throttle<sensor_msgs::JointState>("/output/from/other/node", "/rosbag/topic/to/be/throttled");
+  BagThrottler::throttle<sensor_msgs::JointState>("/output/from/other/node", "/rosbag/topic/to/be/throttled");
 
   ros::Subscriber sub = nh.subscribe("/iiwa/joint_states", 2, &callback);
 

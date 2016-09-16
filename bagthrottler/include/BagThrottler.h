@@ -86,7 +86,7 @@ class BagThrottler
       ros::NodeHandle nh;
       client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl");
       srvCall.request.topic = throttledTopic;
-      srvCall.request.id = ros::this_node::getName();
+      srvCall.request.id = ros::this_node::getName() + ":" + throttledTopic;
       srvCall.request.qsize = 1;
 
       // throttle bag already before it starts publishing
