@@ -187,5 +187,6 @@ target_link_libraries(bagthrottlertest ${catkin_LIBRARIES} )
 ######################################
 ## Define information for packaging ##
 ######################################
-#set(CPACK_DEBIAN_PACKAGE_DEPENDS "rcimu, ros-indigo-ln-msgs")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "ros-$ENV{ROS_DISTRO}-rc-msgs")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 include(cmake/package_debian.cmake)
