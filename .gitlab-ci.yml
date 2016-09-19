@@ -1,8 +1,8 @@
 before_script:
   - sh -c 'echo "deb http://apt.roboception.de/stable $DISTRO_CODENAME main" > /etc/apt/sources.list.d/roboception-stable.list'
   - sh -c 'echo "deb http://apt.roboception.de/testing $DISTRO_CODENAME main" > /etc/apt/sources.list.d/roboception-testing.list'
-  - wget -qO - http://apt.roboception.de/archive.key | apt-key add -
-  - apt-get update -yq && apt-get install -y lintian # append packages required for your build here, e.g. cvkit ros-${ROS_DISTRO}-rc-msgs
+  - curl http://apt.roboception.de/archive.key | apt-key add -
+  - apt-get update -yq && apt-get install -y lintian ros-${ROS_DISTRO}-rc-msgs
 
 #############
 # Templates
