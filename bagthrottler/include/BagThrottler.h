@@ -74,6 +74,7 @@ class BagThrottler
     template<class M>
     void throttlingCallback(boost::shared_ptr<M const>)
     {
+      checkAndReconnect();
       client.call(srvCall);
     }
 
@@ -83,14 +84,29 @@ class BagThrottler
                  const std::string &throttledTopic) : throttledTopic(
             throttledTopic)
     {
-      ros::NodeHandle nh;
-      client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl");
+      // create service call object
       srvCall.request.topic = throttledTopic;
       srvCall.request.id = ros::this_node::getName() + ":" + throttledTopic;
       srvCall.request.qsize = 1;
 
+      // connect service call client to server
+      ros::NodeHandle nh;
+      client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl", true);
+
       // throttle bag already before it starts publishing
+      checkAndReconnect();
       client.call(srvCall);
+    }
+
+    void checkAndReconnect() {
+      while (!client.isValid())
+      {
+        // need to reconnect in case we lost persistent connection
+        ros::NodeHandle nh;
+        client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl", true);
+        ROS_WARN_STREAM_THROTTLE(1, "Throttler '" << srvCall.request.id
+                                                  << "' has no connection to rosbag! Trying to (re-)connect.");
+      }
     }
 
     void storeSubscriber(ros::Subscriber s)

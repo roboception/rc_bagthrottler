@@ -22,15 +22,15 @@ void callback(JointStateConstPtr msg)
 
 int main(int argc, char *argv[])
 {
-
+  // first we need to initialize ros node
   ros::init(argc, argv, "throttler_test");
-  ros::NodeHandle nh;
 
-
-  // configure bag throttler to a specific rosbag topic
+  // second, we configure bag throttler to a specific rosbag topic
   BagThrottler::throttle<sensor_msgs::JointState>("/iiwa/joint_states");
   BagThrottler::throttle<sensor_msgs::JointState>("/output/from/other/node", "/rosbag/topic/to/be/throttled");
 
+  // finally, we can register our actual subscribers
+  ros::NodeHandle nh;
   ros::Subscriber sub = nh.subscribe("/iiwa/joint_states", 2, &callback);
 
   ros::spin();
