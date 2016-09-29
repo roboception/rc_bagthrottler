@@ -5,14 +5,23 @@ using namespace sensor_msgs;
 using namespace rc;
 using namespace std;
 
-
-void callback(JointStateConstPtr msg)
+void fastCallback(JointStateConstPtr msg)
 { static int lastSeq = -1;
   if (lastSeq>0 && lastSeq+1!=msg->header.seq) {
-    throw runtime_error("!!!callback missed event!!!");
+    throw runtime_error("!!!fastCallback missed event!!!");
   }
   lastSeq = msg->header.seq;
-  ROS_INFO_STREAM("callback with heavy computation, stamp: " <<
+  ROS_INFO_STREAM("fastCallback with low computation, stamp: " <<
+       msg->header.stamp << " seq: " << msg->header.seq);
+}
+
+void slowCallback(JointStateConstPtr msg)
+{ static int lastSeq = -1;
+  if (lastSeq>0 && lastSeq+1!=msg->header.seq) {
+    throw runtime_error("!!!slowCallback missed event!!!");
+  }
+  lastSeq = msg->header.seq;
+  ROS_INFO_STREAM("slowCallback with heavy computation, stamp: " <<
        msg->header.stamp << " seq: " << msg->header.seq);
   sleep(1);
 }
@@ -31,7 +40,8 @@ int main(int argc, char *argv[])
 
   // finally, we can register our actual subscribers
   ros::NodeHandle nh;
-  ros::Subscriber sub = nh.subscribe("/iiwa/joint_states", 2, &callback);
+  ros::Subscriber sub = nh.subscribe("/iiwa/joint_states", 5, &fastCallback);
+  ros::Subscriber sub2 = nh.subscribe("/iiwa/joint_states", 2, &slowCallback);
 
   ros::spin();
   return 0;
