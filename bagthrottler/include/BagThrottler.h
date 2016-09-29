@@ -118,8 +118,9 @@ class BagThrottler
     {
       // create service call object
       srvCall.request.topic = throttledTopic;
-      srvCall.request.id = ros::this_node::getName() + ":" + throttledTopic;
+      srvCall.request.id = ros::this_node::getName() + ":" + std::to_string(idCnt) + ":" + throttledTopic;
       srvCall.request.qsize = 1;
+      idCnt++;
 
       // connect service call client to server
       ros::NodeHandle nh;
@@ -147,6 +148,8 @@ class BagThrottler
       sub = s;
     }
 
+    static unsigned int idCnt;
+
     std::string throttledTopic;   //< the rosbag output topic which should be throttled
     std::string subscribedTopic;  //< messages on this topic trigger/determine the throttling
 
@@ -157,6 +160,7 @@ class BagThrottler
     static std::vector<Ptr> AllThrottlers;
 };
 
+unsigned int BagThrottler::idCnt = 0;
 std::vector<BagThrottler::Ptr> BagThrottler::AllThrottlers = std::vector<BagThrottler::Ptr>();
 
 }
