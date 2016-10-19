@@ -6,6 +6,7 @@
 #define RC_BAGTHROTTLER_BAGTHROTTLER_H
 
 #include <ros/ros.h>
+#include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 
 #include <rc_msgs/ThrottleBag.h>
@@ -24,6 +25,8 @@ class BagThrottler
 
     /**
      * Directly connected rosbag throttling.
+     * 
+     * DEPRECADED
      *
      * Configures the bag throttler to throttle the \c topic based on messages
      * that are received by this node.
@@ -43,7 +46,9 @@ class BagThrottler
     }
 
     /**
-     * Transitive rosbag throttling (for longer topic chains)
+     * Transitive rosbag throttling (for longer topic chains) 
+     * 
+     * DEPRECADED
      *
      * Configures the bag throttler to throttle the \c throttledTopic
      * based on messages that are received by this node on \c triggerTopic.
@@ -71,6 +76,33 @@ class BagThrottler
 
       /// store subscriber, otherwise subscription is lost
       throttler->storeSubscriber(sub);
+
+      /// store throttler object, othewise subscription is lost
+      AllThrottlers.push_back(throttler);
+    }
+
+    /**
+     * General rosbag throttling (for longer topic chains)
+     *
+     * Configures the bag throttler to throttle the \c throttledTopic
+     * based on messages that are received by this node on \c sub .
+     *
+     * You can always use this version. 
+     *
+     * @param sub message_filters::subscriber that is used to receive messages
+     * @param throttledTopic the rosbag topic that is to be throttled
+     */
+
+    template<class M, class Sub>
+    static void
+    throttle(Sub &sub, const std::string &throttledTopic)
+    {
+
+      Ptr throttler(new BagThrottler(sub.getTopic(), throttledTopic));
+      // create throttler object and subscribe to triggerTopic
+      sub.registerCallback( boost::bind(&BagThrottler::throttlingCallback<M>,
+                                         throttler.get(), _1));
+
 
       /// store throttler object, othewise subscription is lost
       AllThrottlers.push_back(throttler);
@@ -119,7 +151,7 @@ class BagThrottler
       // create service call object
       srvCall.request.topic = throttledTopic;
       srvCall.request.id = ros::this_node::getName() + ":" + std::to_string(idCnt) + ":" + throttledTopic;
-      srvCall.request.qsize = 1;
+      srvCall.request.qsize = 30;
       idCnt++;
 
       // connect service call client to server
@@ -129,6 +161,7 @@ class BagThrottler
       // throttle bag already before it starts publishing
       checkAndReconnect();
       client.call(srvCall);
+      srvCall.request.qsize = 1;
     }
 
     void checkAndReconnect() {
