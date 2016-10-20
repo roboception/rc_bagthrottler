@@ -24,7 +24,6 @@ class BagThrottler
 
     BagThrottler()
     {
-      ros::param::get("/use_sim_time", active);
     }
     typedef boost::shared_ptr<BagThrottler> Ptr;
 
@@ -47,6 +46,8 @@ class BagThrottler
     template<class M>
     static void throttle(const std::string &topic)
     {
+      bool active = false;
+      ros::param::get("/use_sim_time", active);
       if (!active) { return; }
 
       throttle<M>(topic, topic);
@@ -73,7 +74,8 @@ class BagThrottler
     static void
     throttle(const std::string &triggerTopic, const std::string &throttledTopic)
     {
-
+      bool active = false;
+      ros::param::get("/use_sim_time", active);
       if (!active) { return; }
 
       // create throttler object and subscribe to triggerTopic
@@ -106,6 +108,9 @@ class BagThrottler
     static void
     throttle(Sub &sub, const std::string &throttledTopic)
     {
+      
+      bool active = false;
+      ros::param::get("/use_sim_time", active);
       if (!active) { return; }
 
       Ptr throttler(new BagThrottler(sub.getTopic(), throttledTopic));
@@ -135,6 +140,8 @@ class BagThrottler
     static void
     throttle(message_filters::Synchronizer<SyncPolicy> &sync, const std::string &throttledTopic)
     {
+      bool active = false;
+      ros::param::get("/use_sim_time", active);
       if (!active) { return; }
 
       // create throttler object and subscribe to triggerTopic
@@ -149,7 +156,6 @@ class BagThrottler
     template<class M>
     void throttlingCallback(boost::shared_ptr<M const>)
     {
-      if (!active) { return; }
 
       checkAndReconnect();
       client.call(srvCall);
@@ -206,12 +212,9 @@ class BagThrottler
     ros::Subscriber sub;          //< subscriber to be stored for that it is not getting lost
     static std::vector<Ptr> AllThrottlers;
 
-    // we only want to throttle if we are in playback mode
-    static bool active;
 };
 
 unsigned int BagThrottler::idCnt = 0;
-bool BagThrottler::active = false;
 std::vector<BagThrottler::Ptr> BagThrottler::AllThrottlers = std::vector<BagThrottler::Ptr>();
 
 }
