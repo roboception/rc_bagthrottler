@@ -21,15 +21,16 @@ namespace rc
 class BagThrottler
 {
   public:
-    
-    BagThrottler(){
-       ros::param::get("/use_sim_time", active);
+
+    BagThrottler()
+    {
+      ros::param::get("/use_sim_time", active);
     }
     typedef boost::shared_ptr<BagThrottler> Ptr;
 
     /**
      * Directly connected rosbag throttling.
-     * 
+     *
      * DEPRECADED
      *
      * Configures the bag throttler to throttle the \c topic based on messages
@@ -46,13 +47,14 @@ class BagThrottler
     template<class M>
     static void throttle(const std::string &topic)
     {
-      if(!active)return;
+      if (!active) { return; }
+
       throttle<M>(topic, topic);
     }
 
     /**
-     * Transitive rosbag throttling (for longer topic chains) 
-     * 
+     * Transitive rosbag throttling (for longer topic chains)
+     *
      * DEPRECADED
      *
      * Configures the bag throttler to throttle the \c throttledTopic
@@ -72,8 +74,8 @@ class BagThrottler
     throttle(const std::string &triggerTopic, const std::string &throttledTopic)
     {
 
-      if(!active)return;
-      
+      if (!active) { return; }
+
       // create throttler object and subscribe to triggerTopic
       ros::NodeHandle nh;
       Ptr throttler(new BagThrottler(triggerTopic, throttledTopic));
@@ -94,7 +96,7 @@ class BagThrottler
      * Configures the bag throttler to throttle the \c throttledTopic
      * based on messages that are received by this node on \c sub .
      *
-     * You can always use this version. 
+     * You can always use this version.
      *
      * @param sub message_filters::subscriber that is used to receive messages
      * @param throttledTopic the rosbag topic that is to be throttled
@@ -104,12 +106,12 @@ class BagThrottler
     static void
     throttle(Sub &sub, const std::string &throttledTopic)
     {
-      if(!active)return;
+      if (!active) { return; }
 
       Ptr throttler(new BagThrottler(sub.getTopic(), throttledTopic));
       // create throttler object and subscribe to triggerTopic
-      sub.registerCallback( boost::bind(&BagThrottler::throttlingCallback<M>,
-                                         throttler.get(), _1));
+      sub.registerCallback(boost::bind(&BagThrottler::throttlingCallback<M>,
+                                       throttler.get(), _1));
 
 
       /// store throttler object, othewise subscription is lost
@@ -131,9 +133,9 @@ class BagThrottler
     */
     template<class M, class SyncPolicy>
     static void
-    throttle(message_filters::Synchronizer<SyncPolicy>& sync, const std::string &throttledTopic)
+    throttle(message_filters::Synchronizer<SyncPolicy> &sync, const std::string &throttledTopic)
     {
-      if(!active)return;
+      if (!active) { return; }
 
       // create throttler object and subscribe to triggerTopic
       ros::NodeHandle nh;
@@ -147,8 +149,8 @@ class BagThrottler
     template<class M>
     void throttlingCallback(boost::shared_ptr<M const>)
     {
-      if(!active)return;
-      
+      if (!active) { return; }
+
       checkAndReconnect();
       client.call(srvCall);
     }
@@ -157,7 +159,7 @@ class BagThrottler
 
     BagThrottler(const std::string &triggerTopic,
                  const std::string &throttledTopic) : throttledTopic(
-            throttledTopic)
+                     throttledTopic)
     {
       // create service call object
       srvCall.request.topic = throttledTopic;
@@ -175,14 +177,15 @@ class BagThrottler
       srvCall.request.qsize = 1;
     }
 
-    void checkAndReconnect() {
+    void checkAndReconnect()
+    {
       while (!client.isValid())
       {
         // need to reconnect in case we lost persistent connection
         ros::NodeHandle nh;
         client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl", true);
         ROS_WARN_STREAM_THROTTLE(1, "Throttler '" << srvCall.request.id
-                                                  << "' has no connection to rosbag! Trying to (re-)connect.");
+                                 << "' has no connection to rosbag! Trying to (re-)connect.");
         usleep(100);
       }
     }

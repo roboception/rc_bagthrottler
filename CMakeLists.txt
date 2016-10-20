@@ -101,7 +101,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS bagthrottler/include
+  INCLUDE_DIRS include
 #  LIBRARIES logging
 #  CATKIN_DEPENDS rc_msgs
 #  DEPENDS system_lib
@@ -113,7 +113,7 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(bagthrottler/include)
+include_directories(include)
 include_directories(${catkin_INCLUDE_DIRS})
 
 ## Declare a cpp library
@@ -122,7 +122,7 @@ include_directories(${catkin_INCLUDE_DIRS})
 # )
 
 ## Declare a cpp executable
-add_executable(bagthrottlertest bagthrottler/src/test_throttler.cc)
+add_executable(bagthrottlertest src/test_throttler.cc)
 target_link_libraries(bagthrottlertest ${catkin_LIBRARIES} )
 
 
@@ -157,7 +157,7 @@ target_link_libraries(bagthrottlertest ${catkin_LIBRARIES} )
 # )
 
 ## Mark cpp header files for installation
- install(DIRECTORY bagthrottler/include/
+ install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
    FILES_MATCHING PATTERN "*.h"
    PATTERN ".svn" EXCLUDE
