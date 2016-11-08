@@ -9,7 +9,7 @@ before_script:
 # Templates
 #############
 .amd64_template: &amd64_job   # Hidden job that defines an anchor named 'amd64_job'
-  image: registry.roboception.de/tools/docker_images::indigo-perception-pcl
+  image: registry.roboception.de/tools/docker_images:indigo-perception-pcl
   tags:
     - amd64
     - docker
