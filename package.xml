@@ -10,8 +10,8 @@
     <maintainer email="christian.emmerich@roboception.de">Christian Emmerich</maintainer>
     <author email="christian.emmerich@roboception.de">Christian Emmerich</author>
     <license>Custom</license>
-
+    <run_depend>message_runtime</run_depend>
     <buildtool_depend>catkin</buildtool_depend>
-    <build_depend>rc_msgs</build_depend>
     <build_depend>roscpp</build_depend>
+    <build_depend>message_generation</build_depend>
 </package>

@@ -27,7 +27,7 @@ add_definitions(-std=c++11)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp rc_msgs sensor_msgs message_filters
+  roscpp sensor_msgs message_filters message_generation
 )
 
 
@@ -72,11 +72,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+   ThrottleBag.srv 
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -86,10 +85,9 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   rc_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -103,7 +101,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES logging
-#  CATKIN_DEPENDS rc_msgs
+#  CATKIN_DEPENDS 
 #  DEPENDS system_lib
 )
 
@@ -187,6 +185,5 @@ target_link_libraries(bagthrottlertest ${catkin_LIBRARIES} )
 ######################################
 ## Define information for packaging ##
 ######################################
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "ros-$ENV{ROS_DISTRO}-rc-msgs")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 include(cmake/package_debian.cmake)

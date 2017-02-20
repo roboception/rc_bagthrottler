@@ -1,0 +1,16 @@
+#request
+#unique id for subscriber
+string id
+
+# topic of subscriber
+# use topic "USER" for standard pause (keyboard pause)
+string topic
+
+# queue size of subscriber
+# a queue size < 0 disables message counting for this channel -> play
+# a queue size == 0 pauses playback 
+# a queue size of n play n messages of topic, then pauses
+int32 qsize
+
+---
+#no response

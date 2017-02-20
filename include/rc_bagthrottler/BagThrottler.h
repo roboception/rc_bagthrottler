@@ -9,7 +9,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 
-#include <rc_msgs/ThrottleBag.h>
+#include <rc_bagthrottler/ThrottleBag.h>
 
 namespace rc
 {
@@ -175,7 +175,7 @@ class BagThrottler
 
       // connect service call client to server
       ros::NodeHandle nh;
-      client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl", true);
+      client = nh.serviceClient<rc_bagthrottler::ThrottleBag>("/bagControl", true);
 
       // throttle bag already before it starts publishing
       checkAndReconnect();
@@ -189,7 +189,7 @@ class BagThrottler
       {
         // need to reconnect in case we lost persistent connection
         ros::NodeHandle nh;
-        client = nh.serviceClient<rc_msgs::ThrottleBag>("/bagControl", true);
+        client = nh.serviceClient<rc_bagthrottler::ThrottleBag>("/bagControl", true);
         ROS_WARN_STREAM_THROTTLE(1, "Throttler '" << srvCall.request.id
                                  << "' has no connection to rosbag! Trying to (re-)connect.");
         //usleep(100);
@@ -207,7 +207,7 @@ class BagThrottler
     std::string subscribedTopic;  //< messages on this topic trigger/determine the throttling
 
     ros::ServiceClient client;    //< the service client that implements the throttling
-    rc_msgs::ThrottleBag srvCall; //< the service call that implements the throttling
+    rc_bagthrottler::ThrottleBag srvCall; //< the service call that implements the throttling
 
     ros::Subscriber sub;          //< subscriber to be stored for that it is not getting lost
     static std::vector<Ptr> AllThrottlers;
