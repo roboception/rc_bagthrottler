@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
     <name>rc_bagthrottler</name>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <description>
         This package provides functionalities to throttle the output of
         rosbag on user-defined topics (e.g. to ensure deterministic computation
