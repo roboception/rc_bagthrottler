@@ -108,7 +108,7 @@ class BagThrottler
     static void
     throttle(Sub &sub, const std::string &throttledTopic)
     {
-
+      
       bool active = false;
       ros::param::get("/use_sim_time", active);
       if (!active) { return; }
@@ -185,14 +185,14 @@ class BagThrottler
 
     void checkAndReconnect()
     {
-      if (!client.isValid())
+      while (!client.isValid())
       {
         // need to reconnect in case we lost persistent connection
         ros::NodeHandle nh;
         client = nh.serviceClient<rc_bagthrottler::ThrottleBag>("/bagControl", true);
         ROS_WARN_STREAM_THROTTLE(1, "Throttler '" << srvCall.request.id
                                  << "' has no connection to rosbag! Trying to (re-)connect.");
-        //usleep(100);
+        usleep(100);
       }
     }
 
