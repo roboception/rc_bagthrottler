@@ -101,7 +101,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES logging
-#  CATKIN_DEPENDS 
+  CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -126,7 +126,7 @@ target_link_libraries(bagthrottlertest ${catkin_LIBRARIES} )
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(logging_node logging_generate_messages_cpp)
+add_dependencies(bagthrottlertest ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 #target_link_libraries(foo
