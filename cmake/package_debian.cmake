@@ -1,5 +1,5 @@
 # general cpack variables
-set(CPACK_PACKAGE_CONTACT "Roboception <info@roboception.de>")
+set(CPACK_PACKAGE_CONTACT "Roboception <support@roboception.de>")
 set(CPACK_PACKAGE_VENDOR "Roboception GmbH, Munich, Germany")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Roboception ${PROJECT_NAME} package")
 
@@ -7,9 +7,19 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Roboception ${PROJECT_NAME} package")
 if (PACKAGE_VERSION)
     set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 else ()
-    message(WARNING "PACKAGE_VERSION not set! Did you include project_version.cmake? Falling back to (${PROJECT_VERSION})")
-    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    message(WARNING "PACKAGE_VERSION not set! Did you include project_version.cmake?")
+    if (RC_PROJECT_VERSION)
+        message(WARNING "CPACK_PACKAGE_VERSION: Falling back to RC_PROJECT_VERSION (${RC_PROJECT_VERSION})")
+        set(CPACK_PACKAGE_VERSION ${RC_PROJECT_VERSION})
+    elseif (PROJECT_VERSION)
+        message(WARNING "CPACK_PACKAGE_VERSION: Falling back to PROJECT_VERSION (${PROJECT_VERSION})")
+        set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    endif ()
 endif ()
+
+# add date stamp to CPACK_PACKAGE_VERSION
+string(TIMESTAMP STAMP "%Y%m%d+%H%M%S")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION}-0+${STAMP}")
 
 
 ###############################
@@ -20,7 +30,7 @@ set(CPACK_GENERATOR "DEB")
 
 if (NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
 # if architecture is already set (e.g. to "all"), this is not needed
-# add -1~distribution-codename (e.g. -1~trusty or -1~xenial) to end of package version
+# add ~distribution-codename (e.g. ~trusty or ~xenial) to end of package version
 # if lsb_release is available, take it from there or fall back to DISTRO_CODENAME env variable
     set(DISTRO_CODENAME $ENV{DISTRO_CODENAME})
     find_program(LSB_RELEASE_CMD lsb_release)
@@ -31,7 +41,7 @@ if (NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif ()
     if (DISTRO_CODENAME)
-        set(CPACK_PACKAGE_VERSION ${CPACK_PACKAGE_VERSION}-1~${DISTRO_CODENAME})
+        set(CPACK_PACKAGE_VERSION ${CPACK_PACKAGE_VERSION}~${DISTRO_CODENAME})
     else ()
         message(STATUS "Could not find lsb_release nor is DISTRO_CODENAME set.")
     endif ()
@@ -47,28 +57,26 @@ if (NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif ()
 endif ()
+message(STATUS "CPACK_PACKAGE_VERSION: " ${CPACK_PACKAGE_VERSION})
 
-# package name is lower case of project name with _ replaced by -
-string(TOLOWER "${PROJECT_NAME}" PROJECT_NAME_LOWER)
-string(REPLACE "_" "-" CPACK_PACKAGE_NAME "${PROJECT_NAME_LOWER}")
+# package name defaults to lower case of project name with _ replaced by -
+if (NOT CPACK_PACKAGE_NAME)
+    string(TOLOWER "${PROJECT_NAME}" PROJECT_NAME_LOWER)
+    string(REPLACE "_" "-" CPACK_PACKAGE_NAME "${PROJECT_NAME_LOWER}")
+endif ()
+message(STATUS "CPACK_PACKAGE_NAME: " ${CPACK_PACKAGE_NAME})
 
 # check if it is a ROS/catkin package
 if (EXISTS "${PROJECT_SOURCE_DIR}/package.xml")
-    file(STRINGS "${PROJECT_SOURCE_DIR}/package.xml" PACKAGE_XML_VERSION REGEX <version>[0-9.]*</version>)
-    string(REGEX REPLACE .*<version>\([0-9.]*\)</version>.* \\1 ROS_PACKAGE_VERSION "${PACKAGE_XML_VERSION}")
-    if (NOT ROS_PACKAGE_VERSION MATCHES ${PROJECT_VERSION})
-        message(WARNING "Version in package.xml (${ROS_PACKAGE_VERSION}) doesn't match project version (${PROJECT_VERSION})")
-    endif ()
     set(ROS_DISTRO $ENV{ROS_DISTRO})
-    if (NOT ROS_DISTRO)
-        message(WARNING "ROS_DISTRO not set! falling back to indigo")
-        set(ROS_DISTRO "indigo")
+    if (ROS_DISTRO)
+        set(CPACK_PACKAGE_NAME "ros-${ROS_DISTRO}-${CPACK_PACKAGE_NAME}")
+        # tell CPack to use CMAKE_INSTALL_PREFIX
+        # cmake -DCATKIN_BUILD_BINARY_PACKAGE="1" -DCMAKE_INSTALL_PREFIX="/opt/ros/$ROS_DISTRO" -DCMAKE_PREFIX_PATH="/opt/ros/$ROS_DISTRO" ..
+        set(CPACK_SET_DESTDIR true)
+    else ()
+        message(STATUS "ROS_DISTRO not set. Not treating this as a ROS package.")
     endif ()
-    set(CPACK_PACKAGE_NAME "ros-${ROS_DISTRO}-${CPACK_PACKAGE_NAME}")
-
-    # tell CPack to use CMAKE_INSTALL_PREFIX
-    # cmake -DCATKIN_BUILD_BINARY_PACKAGE="1" -DCMAKE_INSTALL_PREFIX="/opt/ros/indigo" -DCMAKE_PREFIX_PATH="/opt/ros/indigo" -DCMAKE_BUILD_TYPE=Release ..
-    set(CPACK_SET_DESTDIR true)
 endif ()
 
 if(EXCLUSIVE_CUSTOMER)
@@ -83,6 +91,7 @@ if(EXCLUSIVE_CUSTOMER)
 endif()
 
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+message(STATUS "CPACK_PACKAGE_FILE_NAME: " ${CPACK_PACKAGE_FILE_NAME})
 
 #########################################
 ## things you might need to change ??? ##
@@ -101,17 +110,13 @@ if (PROJECT_LIBRARIES)
 endif ()
 
 # if there are shared libs exported by this package:
-# generate debian shlibs file and call ldconf in postinst and postrm scripts
+# generate debian shlibs file and trigger ldconfig
 if (sharedlibs)
     set(SHLIBS_FILE "${CMAKE_CURRENT_BINARY_DIR}/shlibs")
-    set(POSTINST_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/postinst")
-    set(POSTRM_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/postrm")
+    set(TRIGGERS_FILE "${CMAKE_CURRENT_BINARY_DIR}/triggers")
 
-    # Generate postinst, prerm and postrm hooks
-    file(WRITE "${POSTINST_SCRIPT}" "#!/bin/sh\n\nset -e\n")
-    file(WRITE "${POSTRM_SCRIPT}" "#!/bin/sh\n\nset -e\n")
-    file(APPEND "${POSTINST_SCRIPT}" "if [ \"$1\" = \"configure\" ]; then\n        ldconfig\nfi\n")
-    file(APPEND "${POSTRM_SCRIPT}" "if [ \"$1\" = \"remove\" ]; then\n        ldconfig\nfi\n")
+    # Generate triggers file
+    file(WRITE "${TRIGGERS_FILE}" "activate-noawait ldconfig\n")
 
     # Generate shlibs file
     # also the lib needs to set SOVERSION via set_target_properties:
@@ -127,9 +132,17 @@ if (sharedlibs)
         file(APPEND "${SHLIBS_FILE}" "lib${libname} ${so_abiversion} ${CPACK_PACKAGE_NAME}\n")
     endforeach (libname)
 
-    execute_process(COMMAND chmod 644 "${SHLIBS_FILE}")
-    execute_process(COMMAND chmod 755 "${POSTINST_SCRIPT}" "${POSTRM_SCRIPT}")
-    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${SHLIBS_FILE};${POSTINST_SCRIPT};${POSTRM_SCRIPT}")
+    execute_process(COMMAND chmod 644 "${SHLIBS_FILE}" "${TRIGGERS_FILE}")
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${SHLIBS_FILE};${TRIGGERS_FILE}")
+endif ()
+
+if (conffiles)
+  set(CONFFILES_FILE "${CMAKE_CURRENT_BINARY_DIR}/conffiles")
+  file(WRITE "${CONFFILES_FILE}" "")
+  foreach (conffile ${conffiles})
+    file(APPEND "${CONFFILES_FILE}" "${conffile}\n")
+  endforeach (conffile)
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA};${CONFFILES_FILE}")
 endif ()
 
 include(CPack)

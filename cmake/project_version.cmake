@@ -1,11 +1,6 @@
 #
-# Sets PROJECT_VERSION and PACKAGE_VERSION
+# Sets RC_PROJECT_VERSION and PACKAGE_VERSION
 #
-
-# Don't set PROJECT_VERSION to empty string when no VERSION is given to project() command.
-if(POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD)
-endif()
 
 # Split a version number into separate components
 # version the version number to split
@@ -28,16 +23,18 @@ function(version_split version major minor patch extra)
     else(version_valid)
         message(AUTHOR_WARNING "Bad version ${version}; falling back to 0 (have you made an initial release?)")
         set(${major} "0" PARENT_SCOPE)
-        set(${minor} "" PARENT_SCOPE)
-        set(${patch} "" PARENT_SCOPE)
+        set(${minor} "0" PARENT_SCOPE)
+        set(${patch} "0" PARENT_SCOPE)
         set(${extra} "" PARENT_SCOPE)
     endif(version_valid)
 endfunction(version_split)
 
-##############################
-# get PROJECT_VERSION from git
-##############################
-find_program(GIT_CMD git)
+##########################
+# get GIT_VERSION
+# and GIT_FULL_VERSION
+##########################
+find_program(GIT_CMD git
+             PATHS "C:/Program Files/Git/bin")
 mark_as_advanced(GIT_CMD)
 if (GIT_CMD)
     execute_process(COMMAND ${GIT_CMD} rev-parse --show-toplevel
@@ -45,7 +42,7 @@ if (GIT_CMD)
             OUTPUT_VARIABLE GIT_TOPLEVEL
             ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
-if (GIT_CMD AND EXISTS "${GIT_TOPLEVEL}")
+if (GIT_CMD AND NOT "${GIT_TOPLEVEL}" STREQUAL "")
     execute_process(COMMAND ${GIT_CMD} rev-parse --short HEAD
             WORKING_DIRECTORY ${GIT_TOPLEVEL}
             OUTPUT_VARIABLE GIT_SHA1
@@ -59,61 +56,108 @@ if (GIT_CMD AND EXISTS "${GIT_TOPLEVEL}")
 
     if (GIT_DESCRIBE)
         string(REGEX REPLACE "v?([0-9.]+).*" "\\1" GIT_VERSION ${GIT_DESCRIBE})
-        #message(STATUS "GIT_VERSION: " ${GIT_VERSION})
-        if(PROJECT_VERSION)
-            if(NOT GIT_DESCRIBE MATCHES ${PROJECT_VERSION})
-                message(WARNING "Version from git (${GIT_VERSION}) doesn't match already specified PROJECT_VERSION (${PROJECT_VERSION})")
-            endif()
-        endif()
-
-        # project version is MAJOR.MINOR.PATCH
-        set(PROJECT_VERSION ${GIT_VERSION})
+        message(STATUS "GIT_VERSION: " ${GIT_VERSION})
 
         # as package version we use the full version from git describe: 1.7.1+7+ge324c81
         if (GIT_DESCRIBE MATCHES ".*-g.*")
             # convert a git describe string to usable debian version, e.g. v1.7.1-7-ge324c81 to 1.7.1+7+ge324c81
-            string(REGEX REPLACE "v?([0-9.]*)-([0-9]*)-([a-g0-9]*).*" "\\1+\\2+\\3" DEB_GIT_VERSION ${GIT_DESCRIBE})
-            set(PACKAGE_VERSION ${DEB_GIT_VERSION})
+            string(REGEX REPLACE "v?([0-9]*.[0-9.]*).*-([0-9]*)-([a-g0-9]*)" "\\1+\\2+\\3" GIT_FULL_VERSION ${GIT_DESCRIBE})
         else()
-            # current HEAD is git tag (i.e. releaase), directly use the version
-            set(PACKAGE_VERSION ${GIT_VERSION})
+            # current HEAD is git tag (i.e. release), directly use the version
+            set(GIT_FULL_VERSION ${GIT_VERSION})
         endif()
     else ()
         # no (suitable) tag found
-        if (PROJECT_VERSION)
-            message(WARNING "Could not extract version from git! Using manually specified PROJECT_VERSION.")
-        else ()
-            message(WARNING "Could not extract version from git and PROJECT_VERSION not set. Defaulting to 0.0.0")
-            set(PROJECT_VERSION "0.0.0")
-        endif ()
+        set(GIT_VERSION "0.0.0")
         # get number of commits in repo
         execute_process(COMMAND ${GIT_CMD} rev-list --count HEAD
                 WORKING_DIRECTORY ${GIT_TOPLEVEL}
                 OUTPUT_VARIABLE GIT_COMMIT_COUNT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-        set(PACKAGE_VERSION ${PROJECT_VERSION}+${GIT_COMMIT_COUNT}+g${GIT_SHA1})
+        set(GIT_FULL_VERSION 0.0.0+${GIT_COMMIT_COUNT}+g${GIT_SHA1})
     endif ()
 endif ()
 
-# check that project version is now set
-if (NOT PROJECT_VERSION)
-    message(WARNING "PROJECT_VERSION not set. Defaulting to 0.0.0")
-    set(PROJECT_VERSION "0.0.0")
-endif ()
-if (NOT PACKAGE_VERSION)
-    message(WARNING "PACKAGE_VERSION not set! Falling back to (${PROJECT_VERSION})")
-    set(PACKAGE_VERSION ${PROJECT_VERSION})
+#########################
+# get PACKAGE_XML_VERSION
+#########################
+if (EXISTS "${PROJECT_SOURCE_DIR}/package.xml")
+    file(STRINGS "${PROJECT_SOURCE_DIR}/package.xml" PACKAGE_XML_VERSION_LINE REGEX <version>[0-9.]*</version>)
+    string(REGEX REPLACE .*<version>\([0-9.]*\)</version>.* \\1 PACKAGE_XML_VERSION "${PACKAGE_XML_VERSION_LINE}")
+    MESSAGE(STATUS "PACKAGE_XML_VERSION: " ${PACKAGE_XML_VERSION})
 endif ()
 
-version_split(${PROJECT_VERSION} PACKAGE_VERSION_MAJOR PACKAGE_VERSION_MINOR PACKAGE_VERSION_PATCH extra)
+########################
+# set RC_PROJECT_VERSION
+# priority:
+#   - manually set
+#   - git
+#   - package.xml
+#   - PROJECT_VERSION
+########################
+if (NOT RC_PROJECT_VERSION)
+    # set RC_PROJECT_VERSION to MAJOR.MINOR.PATCH
+    # PACKAGE_VERSION can have extra info
+    if (GIT_VERSION)
+        set(RC_PROJECT_VERSION ${GIT_VERSION})
+        set(PACKAGE_VERSION ${GIT_FULL_VERSION})
+    elseif (PACKAGE_XML_VERSION)
+        set(RC_PROJECT_VERSION ${PACKAGE_XML_VERSION})
+        set(PACKAGE_VERSION ${RC_PROJECT_VERSION})
+    elseif (PROJECT_VERSION)
+        set(RC_PROJECT_VERSION ${PROJECT_VERSION})
+    else ()
+        message(WARNING "RC_PROJECT_VERSION not set. Defaulting to 0.0.0")
+        set(RC_PROJECT_VERSION "0.0.0")
+    endif ()
+endif ()
+if (NOT PACKAGE_VERSION)
+    message(WARNING "PACKAGE_VERSION not set! Falling back to RC_PROJECT_VERSION (${RC_PROJECT_VERSION})")
+    set(PACKAGE_VERSION ${RC_PROJECT_VERSION})
+endif ()
+
+# warn if versions don't match
+if (GIT_VERSION AND NOT GIT_VERSION MATCHES ${RC_PROJECT_VERSION})
+    message(WARNING "Version from git (${GIT_VERSION}) doesn't match RC_PROJECT_VERSION (${RC_PROJECT_VERSION})")
+endif()
+if (PACKAGE_XML_VERSION AND NOT PACKAGE_XML_VERSION MATCHES ${RC_PROJECT_VERSION})
+    message(WARNING "Version from package.xml (${PACKAGE_XML_VERSION}) doesn't match RC_PROJECT_VERSION (${RC_PROJECT_VERSION})")
+endif()
+
+message(STATUS "RC_PROJECT_VERSION: " ${RC_PROJECT_VERSION})
+message(STATUS "PACKAGE_VERSION: " ${PACKAGE_VERSION})
+
+
+version_split(${RC_PROJECT_VERSION} PACKAGE_VERSION_MAJOR PACKAGE_VERSION_MINOR PACKAGE_VERSION_PATCH extra)
 #message(STATUS "PACKAGE_VERSION_MAJOR: " ${PACKAGE_VERSION_MAJOR})
 #message(STATUS "PACKAGE_VERSION_MINOR: " ${PACKAGE_VERSION_MINOR})
 #message(STATUS "PACKAGE_VERSION_PATCH: " ${PACKAGE_VERSION_PATCH})
 
-message(STATUS "PROJECT_VERSION: " ${PROJECT_VERSION})
-message(STATUS "PACKAGE_VERSION: " ${PACKAGE_VERSION})
+# generate an integer version number: major * 10000 + minor * 100 + patch
+math(EXPR RC_PROJECT_VERSION_INT "${PACKAGE_VERSION_MAJOR} * 10000 + ${PACKAGE_VERSION_MINOR} * 100 + ${PACKAGE_VERSION_PATCH}")
 
-# make PROJECT_VERSION available as define in the project source
-add_definitions(-DPROJECT_VERSION="${PROJECT_VERSION}")
+# make RC_PROJECT_VERSION available as define in the project source
+add_definitions(-DPROJECT_VERSION="${RC_PROJECT_VERSION}")
+add_definitions(-DPROJECT_VERSION_INT=${RC_PROJECT_VERSION_INT})
 add_definitions(-DPACKAGE_VERSION="${PACKAGE_VERSION}")
+add_definitions(-DPACKAGE_VERSION_MAJOR=${PACKAGE_VERSION_MAJOR})
+add_definitions(-DPACKAGE_VERSION_MINOR=${PACKAGE_VERSION_MINOR})
+add_definitions(-DPACKAGE_VERSION_PATCH=${PACKAGE_VERSION_PATCH})
+
+# set ABI version to major.minor, which will be used for the SOVERSION
 set(abiversion "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
+
+# generate project_version.h and project_version.cc if the .in files exist
+#
+# These files provide compile-time and runtime version information about your project.
+# To offer the version info to the users of your library, you need to
+# adapt the following lines in your respective CMakeLists.txt:
+#   add_library(<yourlibraryname> SHARED <your code files> ${CMAKE_CURRENT_BINARY_DIR}/project_version.cc)
+#   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/project_version.h COMPONENT dev DESTINATION include/<your-include-dir>)
+# To use it within your library or tests you need to add the include directory:
+# > target_include_directories(yourtarget PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
+if (EXISTS "${PROJECT_SOURCE_DIR}/cmake/project_version.h.in")
+    string(TOUPPER "${PROJECT_NAME}" PROJECT_NAME_UPPER)
+    configure_file(cmake/project_version.h.in  ${PROJECT_NAME}/project_version.h @ONLY)
+    configure_file(cmake/project_version.cc.in ${PROJECT_NAME}/project_version.cc @ONLY)
+endif ()
